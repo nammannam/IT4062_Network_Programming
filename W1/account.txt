@@ -1,0 +1,6 @@
+admin admin123 admin@gmail.com 0123456789 admin 1
+namnk namnknewpw namnk@gmail.com 0123456789 user 1
+hungng 1 hungng@hust.edu 0123456789 user 1
+locdinh locdinh123 123@gmail.com 0987654321 user 1
+quangvn vnquang12 quangvn22@gmail.com 0987654321 user 1
+test2 newpassword test2new@gmail.com 0123456789 user 1
