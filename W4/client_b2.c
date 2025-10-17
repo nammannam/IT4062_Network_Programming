@@ -66,8 +66,27 @@ int main(int argc, char *argv[])
         line[strcspn(line, "\n")] = '\0';
 
         // Nếu dòng rỗng, bỏ qua
-        if (strlen(line) == 0)
-            continue;
+        if (strlen(line) == 0 && isLoggedIn == 1)
+        {
+            strcpy(buffer, "bye");
+            sendto(sockfd, buffer, strlen(buffer), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+
+            // Nhận phản hồi từ server
+            socklen_t servaddr_len = sizeof(servaddr);
+
+            // Note: Nhớ recvfrom là blocking function nên server phải trả lại gì đó mới tiếp tục được
+            int n = recvfrom(sockfd, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&servaddr, &servaddr_len);
+            buffer[n] = '\0';
+
+            memset(username, 0, sizeof(username)); // Reset username để đăng nhập lại
+            memset(password, 0, sizeof(password)); // Reset password để đăng nhập lại
+            isLoggedIn = 0;                        // Reset trạng thái đăng nhập để đăng nhập lại
+
+            break;
+        }else if (strlen(line) == 0){
+            
+            break;
+        }
 
         // Copy vào cmd (hoặc xử lý trực tiếp)
         strcpy(cmd, line);
@@ -80,7 +99,7 @@ int main(int argc, char *argv[])
             // Gửi "bye" đến server
             //  strcpy(buffer, cmd);
             //  sendto(sockfd, buffer, strlen(buffer), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
-            printf("Disconnected from server.\n");
+            // printf("Disconnected from server.\n");
             memset(username, 0, sizeof(username)); // Reset username để đăng nhập lại
             memset(password, 0, sizeof(password)); // Reset password để đăng nhập lại
             isLoggedIn = 0;                        // Reset trạng thái đăng nhập để đăng nhập lại
@@ -107,6 +126,9 @@ int main(int argc, char *argv[])
         printf("Server: %s", buffer);
     }
 
+
+
     close(sockfd);
+
     return 0;
 }

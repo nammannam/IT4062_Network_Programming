@@ -369,7 +369,7 @@ int main(int argc, char *argv[]){
             sendto(socketfd, reply, strlen(reply), 0, (const struct sockaddr *)&cliaddr, cliaddr_len);        
 
         }else if(isLoggedIn == 0){
-            printf("CHECKKKKK\n");
+            // printf("CHECKKKKK\n");
             if(username[0] == '\0'){
                 //Nhận username từ Client
                 strcpy(username, buffer);
