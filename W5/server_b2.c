@@ -341,7 +341,7 @@ int main(int argc, char *argv[]){
     }
 
     //Chuyển sang trạng thái lắng nghe kết nối từ Client (max 5 kết nối chờ)
-    if(listen(listenfd, 1) < 0){
+    if(listen(listenfd, 5) < 0){
         perror("listen failed");
         close(listenfd);
         exit(EXIT_FAILURE);
