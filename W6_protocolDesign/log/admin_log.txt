@@ -1,0 +1,8 @@
+Client: admin | Type=0x10 | Length=5 | Value="Hello"
+Client: admin | Type=0x10 | Length=5 | Value="Hello"
+Client: admin | Type=0x10 | Length=5 | Value="hello"
+Client: admin | Type=0x10 | Length=5 | Value="hello"
+Client: admin | Type=0x10 | Length=9 | Value="namnguyen"
+Client: admin | Type=0x10 | Length=9 | Value="namnguyen"
+Client: admin | Type=0x10 | Length=7 | Value="is here"
+Client: admin | Type=0x10 | Length=7 | Value="is here"
