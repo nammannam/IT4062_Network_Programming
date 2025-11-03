@@ -6,8 +6,7 @@ Mô tả giao thức đơn giản giữa Client và Server với các loại th�
 1. MSG_LOGIN (0x01): Client gửi tên đăng nhập đến Server.
 2. MSG_CF (0x11): Server xác nhận đăng nhập thành công.
 3. MSG_TEXT (0x10): Client gửi tin nhắn văn bản đến Server.
-4. MSG_LOGOUT (0x12): Client gửi yêu cầu đăng xuất đến Server.
-
+4. MSG_DENY (0x00): Server từ chối yêu cầu của Client.
 
 
 */
