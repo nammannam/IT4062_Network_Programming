@@ -1,139 +1,103 @@
+#ifndef LLIST_H
+#define LLIST_H
+
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #define MAX_LEN 20
 
-typedef struct AccountInfo{
-    char username[MAX_LEN];
-    char password[MAX_LEN];
-    char email[MAX_LEN];
-    // char phone[MAX_LEN];
-    // char role[MAX_LEN];
-    char homepage[MAX_LEN];
-    char status;
+/**
+ * @struct AccountInfo
+ * @brief Cấu trúc lưu thông tin tài khoản
+ */
+typedef struct AccountInfo {
+    char username[MAX_LEN];   /**< Tên đăng nhập */
+    char password[MAX_LEN];   /**< Mật khẩu */
+    char email[MAX_LEN];      /**< Email */
+    char homepage[MAX_LEN];   /**< Trang chủ */
+    char status;              /**< Trạng thái tài khoản */
+} AccountInfo_s;
 
-}AccountInfo_s;
+/**
+ * @struct Llist
+ * @brief Cấu trúc node trong danh sách liên kết
+ */
+typedef struct Llist {
+    AccountInfo_s nodeInfo;   /**< Thông tin tài khoản */
+    struct Llist *next;       /**< Con trỏ đến node tiếp theo */
+} Llist_s;
 
-typedef struct Llist{
-    AccountInfo_s nodeInfo;
-    struct Llist *next;
+/* Function declarations */
 
-}Llist_s;
+/**
+ * @brief Tạo một danh sách liên kết mới
+ * @return Con trỏ đến danh sách mới được tạo
+ */
+Llist_s* newList(void);
 
-Llist_s* newList(){
-    Llist_s* list = (Llist_s *)malloc(sizeof(Llist_s));
-    list->next = NULL;
-    
-    return list;
+/**
+ * @brief Tạo một node mới với thông tin tài khoản
+ * @param info Thông tin tài khoản cần lưu
+ * @return Con trỏ đến node mới được tạo
+ */
+Llist_s* makeNewNode(AccountInfo_s info);
 
-}
+/**
+ * @brief Chèn một node vào đầu danh sách
+ * @param list Con trỏ đến danh sách
+ * @param info Thông tin tài khoản cần chèn
+ * @return Con trỏ đến danh sách sau khi chèn
+ */
+Llist_s* insertAtHead(Llist_s *list, AccountInfo_s info);
 
-Llist_s* makeNewNode(AccountInfo_s info){
-    Llist_s * newNode = (Llist_s *)malloc(sizeof(Llist_s));
-    newNode->nodeInfo = info;
-    newNode->next = NULL;
-    return newNode;
-    
-}
+/**
+ * @brief Chèn một node vào cuối danh sách
+ * @param list Con trỏ đến danh sách
+ * @param info Thông tin tài khoản cần chèn
+ * @return Con trỏ đến danh sách sau khi chèn
+ */
+Llist_s* insertAtTail(Llist_s *list, AccountInfo_s info);
 
-Llist_s* insertAtHead(Llist_s *list, AccountInfo_s info){
-    Llist_s * newNode = makeNewNode(info);
-    newNode->next = list->next;
-    list->next = newNode;
-    return list;
-    
-}
+/**
+ * @brief Tìm kiếm tài khoản theo username
+ * @param list Con trỏ đến danh sách
+ * @param username Username cần tìm
+ * @return Thông tin tài khoản nếu tìm thấy, struct rỗng nếu không tìm thấy
+ */
+AccountInfo_s searchUsernameList(Llist_s *list, char *username);
 
-Llist_s* insertAtTail(Llist_s *list, AccountInfo_s info){
-    Llist_s * newNode = makeNewNode(info);
-    Llist_s *pt;
-    for(pt = list ; pt->next != NULL ; pt = pt->next);
-        pt->next = newNode;
-    return list;
-    
-}
+/**
+ * @brief Kiểm tra password của tài khoản
+ * @param llist Con trỏ đến danh sách
+ * @param account Thông tin tài khoản cần kiểm tra
+ * @param password Password cần kiểm tra
+ * @return Thông tin tài khoản nếu password đúng, struct rỗng nếu sai
+ */
+AccountInfo_s checkAccountPassword(Llist_s *llist, AccountInfo_s account, char password[]);
 
-/*
-Search for a user by username in the linked list
-Input: list - pointer to the head of the linked list
-       username - the username to search for
+/**
+ * @brief Tìm node theo username
+ * @param list Con trỏ đến danh sách
+ * @param username Username cần tìm
+ * @return Con trỏ đến node nếu tìm thấy, NULL nếu không tìm thấy
+ */
+Llist_s* findNodeByUsername(Llist_s *list, char username[]);
 
-Output: the AccountInfo_s structure of the found user, or an empty structure if not found
+/**
+ * @brief Xóa node theo username
+ * @param list Con trỏ đến danh sách
+ * @param username Username của node cần xóa
+ */
+void deleteNodeByUsername(Llist_s *list, char username[]);
 
-*/
-AccountInfo_s searchUsernameList(Llist_s *list, char username[]){
+/**
+ * @brief Xóa toàn bộ danh sách
+ * @param list Con trỏ đến danh sách cần xóa
+ */
+void deleteList(Llist_s *list);
 
-    Llist_s *pt;
-    for(pt = list ; pt != NULL ; pt = pt->next){
-        if(strcasecmp(pt->nodeInfo.username, username) == 0){
-
-            return pt->nodeInfo;
-        }
-    }
-    return (AccountInfo_s){"", "", "", "", '0'};
-    
-}
-
-/*
-Check if the provided password matches the account's password
-Input: llist - pointer to the head of the linked list
-       account - the AccountInfo_s structure of the user
-       password - the password to check
-
-Output: the AccountInfo_s structure if the password matches, or an empty structure if not
-*/
-AccountInfo_s checkAccountPassword(Llist_s *llist ,AccountInfo_s account, char password[]){
-    Llist_s *pt;
-    for(pt = llist ; pt != NULL ; pt = pt->next){
-        if(strcasecmp(pt->nodeInfo.username, account.username) == 0 && strcasecmp(pt->nodeInfo.password, password) == 0){
-            return pt->nodeInfo;
-        }
-    }
-    return (AccountInfo_s){"", "", "", "", '0'};
-}
-
-Llist_s* findNodeByUsername(Llist_s *list, char username[]){
-    Llist_s *pt;
-    for(pt = list ; pt != NULL ; pt = pt->next){
-        if(strcasecmp(pt->nodeInfo.username, username) == 0){
-
-            return pt;
-        }
-    }
-    return NULL;
-    
-
-}
-
-
-void deleteNodeByUsername(Llist_s *list, char username[]){
-    Llist_s *pt;
-    for(pt = list ; pt->next != NULL ; pt = pt->next){
-        if(strcasecmp(pt->next->nodeInfo.username, username) == 0){
-            Llist_s *temp = pt->next;
-            pt->next = pt->next->next;
-            free(temp);
-            return;
-        }
-    }
-    
-}
-
-
-void deleteList(Llist_s *list){
-    Llist_s *pt = list;
-    while(pt != NULL){
-        Llist_s *temp = pt;
-        pt = pt->next;
-        free(temp);
-    }
-    
-}
-
-
-
-
+#endif /* LLIST_H */
 
 
 

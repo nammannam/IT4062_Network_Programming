@@ -101,6 +101,26 @@ int main(int argc, char *argv[])
                 }
             }
         }else if(isLoggedIn == 1){
+
+            if(strcmp(line, "bye") == 0){
+
+                // Tạo và gửi message LOGOUT đến server
+                create_message(&msgOut, MSG_TEXT, line);
+                send(sockfd, &msgOut, sizeof(msgOut), 0);
+
+                // Nhận phản hồi từ server
+                int n = recv(sockfd, &msgIn, sizeof(msgIn), 0);
+                if (n <= 0) {
+                    printf("Server closed connection or error.\n");
+                    break;
+                }else{
+                    // Xử lý phản hồi từ server
+                    client_handle_response(&msgIn);
+                    isLoggedIn = 0; // Cập nhật trạng thái đăng xuất
+                }
+                continue;
+            }
+
             // Gửi TEXT message đến server
             create_message(&msgOut, MSG_TEXT, line);
             send(sockfd, &msgOut, sizeof(msgOut), 0);

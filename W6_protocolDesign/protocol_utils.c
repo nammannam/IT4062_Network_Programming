@@ -1,6 +1,9 @@
 #include "protocol.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include "llist.h"
 
 // Tạo message với kiểu và dữ liệu cho trước
 void create_message(application_msg_t *msg, msg_type_t type, const char *data)
@@ -54,11 +57,12 @@ void server_log_msg(const char *client_usr, application_msg_t *msg)
     }
 }
 
-const char logged_in_client = {0};
+char logged_in_client[64];
 
 // Triển khai logic xử lý ở phía Server
-void server_handle_message(application_msg_t *in_msg, application_msg_t *out_msg) {
+void server_handle_message(application_msg_t *in_msg, application_msg_t *out_msg, Llist_s *client_list) {
     // Luôn đảm bảo chuỗi trong in_msg kết thúc null trước khi sử dụng
+    printf("DEBUG: len = %d\n", in_msg->len);
     in_msg->value[in_msg->len] = '\0'; 
     const char* received_value = in_msg->value;
 
@@ -68,12 +72,24 @@ void server_handle_message(application_msg_t *in_msg, application_msg_t *out_msg
             
             // 1. Kiểm tra Login Name (Giả định mọi tên không rỗng đều hợp lệ)
             if (in_msg->len > 0) {
-                // 2. Server đồng ý kết nối và ghi nhớ tên [1, 2]
-                strncpy(logged_in_client, received_value, sizeof(logged_in_client) - 1);
+
+
+                if(client_list != NULL && strcmp(searchUsernameList(client_list, in_msg->value).username, "") != 0){
+                    // Tai khoan ton tai
+
+                    // 2. Server đồng ý kết nối và ghi nhớ tên [1, 2]
+                    strncpy(logged_in_client, received_value, in_msg->len);
                 
-                // 3. Phản hồi bằng MSG_CF [2]
-                create_message(out_msg, MSG_CF, logged_in_client);
-                printf("[SERVER] Gửi phản hồi: CONFIRM cho %s\n", logged_in_client);
+                    // 3. Phản hồi bằng MSG_CF [2]
+                    // Can xu ly kiem tra ton tai tai khoan USER
+                    create_message(out_msg, MSG_CF, logged_in_client);
+                    printf("[SERVER] Gửi phản hồi: CONFIRM cho %s\n", logged_in_client);
+
+                }else if(client_list != NULL){
+                    // Tai khoan khong ton tai
+                    create_message(out_msg, MSG_DENY, "Login name does not exist.");
+                    printf("[SERVER] Gửi phản hồi: DENY (tài khoản không tồn tại)\n");
+                }
             } else {
                 // 4. Nếu tên rỗng, phản hồi DENY
                 create_message(out_msg, MSG_DENY, "Login name cannot be empty.");
@@ -87,10 +103,8 @@ void server_handle_message(application_msg_t *in_msg, application_msg_t *out_msg
             if (strlen(logged_in_client) > 0) {
                 printf("[SERVER] Nhận TEXT từ [%s]: %s\n", logged_in_client, received_value);
                 
-                strncpy(received_value, in_msg->value, in_msg->len);
-
                 // 1. Lưu dữ liệu Text message vào log riêng của Client [1, 2]
-                server_log_message(logged_in_client, received_value);
+                server_log_msg(logged_in_client, in_msg);
                 
                 // 2. Gửi lại Client confirm message [2]
                 create_message(out_msg, MSG_CF, logged_in_client);
@@ -133,5 +147,3 @@ void client_handle_response(application_msg_t *in_msg) {
         }
     }
 }
-
-

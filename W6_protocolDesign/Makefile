@@ -1,19 +1,32 @@
+# Compiler and flags
 CC = gcc
-# CFLAGS = -Wall -Wextra -std=c99
-TARGET1 = client
-TARGET2 = server
-SOURCE1 = client.c
-SOURCE2 = server.c
+CFLAGS = -Wall -Wextra -g
 
-all: $(TARGET1) $(TARGET2)
+# Header files and common objects
+DEPS = protocol.h llist.h
+COMMON_OBJS = protocol_utils.o llist_utils.o
 
-$(TARGET1): $(SOURCE1)
-	$(CC) -o $(TARGET1) $(SOURCE1)
+# Target executables
+TARGETS = client server
 
-$(TARGET2): $(SOURCE2)
-	$(CC) -o $(TARGET2) $(SOURCE2)
+# Default target
+all: $(TARGETS)
 
+# Pattern rule for object files
+%.o: %.c $(DEPS)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Client executable
+client: client.o $(COMMON_OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
+
+# Server executable
+server: server.o $(COMMON_OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
+
+# Clean up
 clean:
-	rm -f $(TARGET1) $(TARGET2)
+	rm -f *.o $(TARGETS)
 
+# Phony targets
 .PHONY: all clean

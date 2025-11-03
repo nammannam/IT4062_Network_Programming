@@ -387,7 +387,7 @@ int main(int argc, char *argv[]){
 
         }
 
-        server_handle_message(&msgIn, &msgOut);
+        server_handle_message(&msgIn, &msgOut, list);
 
         // buffer[rcvBytes] = '\0';
 
@@ -424,6 +424,7 @@ int main(int argc, char *argv[]){
             // Xử lý thông tin nhận từ Client
             AccountInfo_s accountInfo = searchAccountInFile(INPUT_FILE_PATH, bufferUsername);
             
+            // Phần này chưa sử dụng server_handle_message vì phải xử lý đăng nhập tài khoản có trên file .txt
             if(strcmp(accountInfo.username, "") == 0){
                 // strcpy(reply, "Cannot find account\n");
 
@@ -512,10 +513,10 @@ int main(int argc, char *argv[]){
 
 
 
-            //Xử lý các lệnh từ Client khi đã đăng nhập
-            server_handle_message(&msgIn, &msgOut);
+            //Xử lý các lệnh từ Client khi đã đăng nhập - Xử lý Client gửi TEXT
+            // server_handle_message(&msgIn, &msgOut);
             send(connfd, &msgOut, sizeof(msgOut), 0);
-
+            
 
 
             /*
