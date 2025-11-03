@@ -132,18 +132,21 @@ void client_handle_response(application_msg_t *in_msg) {
 
     switch (in_msg->type) {
         case MSG_CF: {
-            printf("[CLIENT] Server CONFIRM (0x%X): %s\n", in_msg->type, recv_value);
+            printf("[CLIENT] Server CONFIRM (0x%02X): %s\n", in_msg->type, recv_value);
             // Client nhận Confirm message -> Có thể gửi tiếp text message tới Server [2]
             break;
+
         }
         case MSG_DENY: {
-            printf("[CLIENT] Server DENY (0x%X): Lỗi: %s\n", in_msg->type, recv_value);
+            printf("[CLIENT] Server DENY (0x%02X): Lỗi: %s\n", in_msg->type, recv_value);
             // Client nhận Deny message -> Thực hiện lại gửi login message cho Server [2]
             break;
+            
         }
         default: {
-            printf("[CLIENT] Phản hồi không mong muốn (0x%X).\n", in_msg->type);
+            printf("[CLIENT] Phản hồi không mong muốn (0x%02X).\n", in_msg->type);
             break;
+
         }
     }
 }
