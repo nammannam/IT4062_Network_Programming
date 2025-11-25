@@ -1,0 +1,66 @@
+#!/bin/bash
+
+# Authentication Logging Test Script
+# This script helps test the authentication logging functionality
+
+echo "=========================================="
+echo "Authentication Logging Test Script"
+echo "=========================================="
+echo ""
+
+# Clean up old log file
+if [ -f "./log/auth.log" ]; then
+    echo "Backing up old auth.log to auth.log.backup..."
+    mv ./log/auth.log ./log/auth.log.backup
+fi
+
+echo "Test instructions:"
+echo ""
+echo "1. Start the server in Terminal 1:"
+echo "   ./server 8080"
+echo ""
+echo "2. Run these test scenarios in Terminal 2:"
+echo ""
+echo "   TEST 1: Account Locked (admin)"
+echo "   ./client 127.0.0.1 8080"
+echo "   Input: admin"
+echo "   Input: admin123"
+echo "   Expected: Account is blocked."
+echo ""
+echo "   TEST 2: Wrong Password (hungng)"
+echo "   ./client 127.0.0.1 8080"
+echo "   Input: hungng"
+echo "   Input: wrongpass"
+echo "   Expected: Incorrect password."
+echo ""
+echo "   TEST 3: Successful Login + Logout (hungng)"
+echo "   ./client 127.0.0.1 8080"
+echo "   Input: hungng"
+echo "   Input: hung2a9"
+echo "   Expected: Login successful"
+echo "   Input: bye"
+echo "   Expected: Logout"
+echo ""
+echo "   TEST 4: Successful Login + Unexpected Disconnect (quangvn)"
+echo "   ./client 127.0.0.1 8080"
+echo "   Input: quangvn"
+echo "   Input: vnquang12"
+echo "   Expected: Login successful"
+echo "   Press: Ctrl+C"
+echo ""
+echo "3. After running all tests, check the auth.log:"
+echo "   cat ./log/auth.log"
+echo ""
+echo "Expected log entries:"
+echo "  [timestamp] ACCOUNT_LOCKED admin"
+echo "  [timestamp] LOGIN admin from 127.0.0.1:XXXXX FAIL (account locked)"
+echo "  [timestamp] LOGIN hungng from 127.0.0.1:XXXXX FAIL (wrong password)"
+echo "  [timestamp] LOGIN hungng from 127.0.0.1:XXXXX SUCCESS"
+echo "  [timestamp] LOGOUT hungng from 127.0.0.1:XXXXX"
+echo "  [timestamp] LOGIN quangvn from 127.0.0.1:XXXXX SUCCESS"
+echo "  [timestamp] LOGOUT quangvn from 127.0.0.1:XXXXX"
+echo ""
+echo "=========================================="
+echo "Press Enter to view auth.log (after tests)"
+read -r
+cat ./log/auth.log 2>/dev/null || echo "No auth.log found yet. Run the tests first."

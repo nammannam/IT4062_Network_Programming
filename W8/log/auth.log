@@ -1,0 +1,18 @@
+[2025-11-25 15:34:27] LOGIN admin from 127.0.0.1:33494 FAIL (wrong password)
+[2025-11-25 15:34:32] LOGIN admin from 127.0.0.1:33494 FAIL (wrong password)
+[2025-11-25 15:34:39] LOGIN namnk from 127.0.0.1:37670 FAIL (wrong password)
+[2025-11-25 15:34:45] LOGIN namnk from 127.0.0.1:37670 SUCCESS
+[2025-11-25 15:34:51] LOGIN admin from 127.0.0.1:33494 SUCCESS
+[2025-11-25 15:48:07] LOGIN admin from 127.0.0.1:35176 SUCCESS
+[2025-11-25 15:48:13] LOGIN namnk from 127.0.0.1:42200 SUCCESS
+[2025-11-25 15:48:40] LOGOUT namnk from 127.0.0.1:42200
+[2025-11-25 15:49:37] LOGIN namnk from 127.0.0.1:42200 FAIL (wrong password)
+[2025-11-25 15:49:41] LOGIN namnk from 127.0.0.1:42200 FAIL (wrong password)
+[2025-11-25 15:49:44] ACCOUNT_LOCKED namnk
+[2025-11-25 15:49:44] LOGIN namnk from 127.0.0.1:42200 FAIL (too many failed attempts)
+[2025-11-25 15:49:47] LOGIN namnk from 127.0.0.1:42200 FAIL (account blocked)
+[2025-11-25 15:49:51] LOGIN namnk from 127.0.0.1:42200 FAIL (account blocked)
+[2025-11-25 15:49:57] LOGOUT admin from 127.0.0.1:35176
+[2025-11-25 15:49:59] LOGIN namnk from 127.0.0.1:35176 FAIL (account blocked)
+[2025-11-25 15:50:02] LOGIN namnk from 127.0.0.1:35176 FAIL (account blocked)
+[2025-11-25 15:50:05] LOGIN namnk from 127.0.0.1:35176 FAIL (account blocked)

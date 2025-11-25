@@ -5,6 +5,7 @@
 #include<arpa/inet.h>
 #include<signal.h>
 #include<sys/wait.h>
+#include<pthread.h>
 #include "llist.h"
 #include "protocol.h"
 
@@ -14,8 +15,21 @@
 #define MAX_LEN 20
 #define BUFFER_SIZE 1024
 
-AccountInfo_s loggedInUser; // Current logged-in user
-int isLoggedIn = 0;         // 0 - no user logged in, 1 - user logged in
+// Cấu trúc dữ liệu truyền cho thread
+typedef struct {
+    int connfd;
+    struct sockaddr_in cliaddr;
+    Llist_s *list;
+} thread_data_t;
+
+// Thread-local storage: mỗi thread có loggedInUser riêng
+typedef struct {
+    AccountInfo_s loggedInUser; // User đăng nhập trong thread này
+    int isLoggedIn;             // Trạng thái đăng nhập (0 = chưa, 1 = đã)
+} thread_session_t;
+
+pthread_mutex_t list_mutex = PTHREAD_MUTEX_INITIALIZER; // Mutex để bảo vệ account list
+pthread_mutex_t file_mutex = PTHREAD_MUTEX_INITIALIZER; // Mutex để bảo vệ file I/O
 
 void readAccountsFromFile(char *filePath, Llist_s *list)
 {
@@ -132,7 +146,7 @@ void updateAccountStatusInFile(char *filePath, char *username, char newStatus)
     fclose(fptr);
 }
 
-int accountSignIn(Llist_s *list, char *filePath, char *username, char *password, int *attempts)
+int accountSignIn(Llist_s *list, char *filePath, char *username, char *password, int *attempts, thread_session_t *session)
 {
     AccountInfo_s searchAcc = searchUsernameList(list, username);
     AccountInfo_s resultAcc;
@@ -161,8 +175,10 @@ int accountSignIn(Llist_s *list, char *filePath, char *username, char *password,
         {
             printf("Account is blocked due to 3 failed login attempts\n");
             // Update the account status in the file to '0' (blocked)
+            pthread_mutex_lock(&file_mutex);
             updateAccountStatusInFile(filePath, username, '0');
             updateAccountListFromFile(filePath, list); //Cập nhật lại danh sách liên kết
+            pthread_mutex_unlock(&file_mutex);
             
             return 2;
         }
@@ -176,23 +192,23 @@ int accountSignIn(Llist_s *list, char *filePath, char *username, char *password,
     {
         // Đăng nhập thành công -> Trả về đầy đủ thông tin Account đã đăng nhập -> 4
         *attempts = 0; // Reset attempts on successful login
-        loggedInUser = searchAcc; // Cập nhật thông tin người dùng đã đăng nhập
-        isLoggedIn = 1;           // Cập nhật trạng thái đã đăng nhập
+        session->loggedInUser = searchAcc; // Cập nhật thông tin người dùng đã đăng nhập
+        session->isLoggedIn = 1;           // Cập nhật trạng thái đã đăng nhập
         return 4;
     }
 }
 
-void accountSignOut()
+void accountSignOut(thread_session_t *session)
 {
-    if (!isLoggedIn)
+    if (!session->isLoggedIn)
     {
         printf("No user is currently logged in.\n");
         return;
     }
 
-    printf("User %s signed out successfully.\n", loggedInUser.username);
-    isLoggedIn = 0;
-    memset(&loggedInUser, 0, sizeof(loggedInUser));
+    printf("User %s signed out successfully.\n", session->loggedInUser.username);
+    session->isLoggedIn = 0;
+    memset(&session->loggedInUser, 0, sizeof(session->loggedInUser));
 }
 
 
@@ -254,7 +270,7 @@ int stringCheck(char *str){
     }
 }
 
-void changePassword(Llist_s *list, char *newPassword, char *reply)
+void changePassword(Llist_s *list, char *newPassword, char *reply, thread_session_t *session)
 {
     char *replyResult;
 
@@ -263,11 +279,11 @@ void changePassword(Llist_s *list, char *newPassword, char *reply)
 
     // Cập nhật mật khẩu trong danh sách liên kết
     Llist_s *pt;
-    pt = findNodeByUsername(list, loggedInUser.username);
+    pt = findNodeByUsername(list, session->loggedInUser.username);
     if (pt != NULL)
     {
         strcpy(pt->nodeInfo.password, newPassword);
-        loggedInUser = pt->nodeInfo; // Cập nhật thông tin người dùng đã đăng nhập
+        session->loggedInUser = pt->nodeInfo; // Cập nhật thông tin người dùng đã đăng nhập
     }
     else
     {
@@ -280,7 +296,9 @@ void changePassword(Llist_s *list, char *newPassword, char *reply)
         return;
     }
     // Cập nhật mật khẩu trong file
+    pthread_mutex_lock(&file_mutex);
     updateAccountToFile(INPUT_FILE_PATH, list);
+    pthread_mutex_unlock(&file_mutex);
 
     replyResult = stringProcess(newPassword);
 
@@ -290,20 +308,38 @@ void changePassword(Llist_s *list, char *newPassword, char *reply)
 }
 
 void sig_chld_handler(int signo){
-    // Xử lý tiến trình con kết thúc để tránh tiến trình zombie
-    pid_t pid;
-    int stat;
-    pid = waitpid(-1, &stat, WNOHANG);
-    printf("Child process %d terminated.\n", pid);
-
+    // Không cần xử lý SIGCHLD với pthread
+    // Giữ lại hàm này để tương thích nếu cần
+    (void)signo; // Tránh warning unused parameter
 }
 
-void handle_client(int connfd, struct sockaddr_in cliaddr, Llist_s *list, pid_t pid_client){
+void* handle_client(void* arg){
+    thread_data_t *data = (thread_data_t*)arg;
+    int connfd = data->connfd;
+    struct sockaddr_in cliaddr = data->cliaddr;
+    Llist_s *list = data->list;
+    pthread_t thread_id = pthread_self();
+    
+    // Giải phóng memory được malloc trong main
+    free(data);
+    
+    // Thread-local session - mỗi client có session riêng
+    thread_session_t session;
+    session.isLoggedIn = 0;
+    memset(&session.loggedInUser, 0, sizeof(session.loggedInUser));
+    
+    // Thread-local logged_in_username - để tránh race condition trong protocol_utils
+    char logged_in_username[64];
+    memset(logged_in_username, 0, sizeof(logged_in_username));
+    
     char username[MAX_LEN];
     char password[MAX_LEN];
     int attempts = 0;
     memset(username, 0, sizeof(username));
     memset(password, 0, sizeof(password));
+    
+    printf("[Thread %lu] Handling client (%s:%d)\n", 
+           (unsigned long)thread_id, inet_ntoa(cliaddr.sin_addr), ntohs(cliaddr.sin_port));
     
     // Khai báo biến cho message
     application_msg_t msgIn;    // Nhận message từ Client
@@ -311,27 +347,28 @@ void handle_client(int connfd, struct sockaddr_in cliaddr, Llist_s *list, pid_t 
     memset(&msgOut, 0, sizeof(msgOut));
     memset(&msgIn, 0, sizeof(msgIn));
 
-        while(1){
+    while(1){
         
-            int rcvBytes = recv(connfd, &msgIn, sizeof(msgIn), 0);
+        int rcvBytes = recv(connfd, &msgIn, sizeof(msgIn), 0);
 
         if(rcvBytes < 0){
             perror("Error: ");
-            return 0;
+            break;
             
         }else if(rcvBytes == 0){
-            printf("Client (%s:%d) disconnected unexpectedly.\n", inet_ntoa(cliaddr.sin_addr), ntohs(cliaddr.sin_port));
+            printf("[Thread %lu] Client (%s:%d) disconnected unexpectedly.\n", 
+                   (unsigned long)thread_id, inet_ntoa(cliaddr.sin_addr), ntohs(cliaddr.sin_port));
             
-            accountSignOut();
+            accountSignOut(&session);
             memset(username, 0, sizeof(username)); //Reset username để nhận lại từ Client
             memset(password, 0, sizeof(password)); //Reset password để nhận lại từ Client
             attempts = 0; //Reset attempts để nhận lại từ Client
-            isLoggedIn = 0; //Reset trạng thái đăng nhập để đăng nhập lại
+            session.isLoggedIn = 0; //Reset trạng thái đăng nhập để đăng nhập lại
             break;
 
         }
 
-        server_handle_message(&msgIn, &msgOut, list, pid_client);
+        server_handle_message(&msgIn, &msgOut, list, thread_id, logged_in_username);
 
         // buffer[rcvBytes] = '\0';
 
@@ -342,14 +379,14 @@ void handle_client(int connfd, struct sockaddr_in cliaddr, Llist_s *list, pid_t 
 
         
         //Xử lý thông tin nhận từ Client
-        if(strcmp(msgIn.value, "bye") == 0 && isLoggedIn == 1){
+        if(strcmp(msgIn.value, "bye") == 0 && session.isLoggedIn == 1){
             //
-            printf("[CHILD %d] Client (%s:%d) disconnected.\n", pid_client, inet_ntoa(cliaddr.sin_addr), ntohs(cliaddr.sin_port));
-            accountSignOut();
+            printf("[Thread %lu] Client (%s:%d) disconnected.\n", (unsigned long)thread_id, inet_ntoa(cliaddr.sin_addr), ntohs(cliaddr.sin_port));
+            accountSignOut(&session);
             memset(username, 0, sizeof(username)); //Reset username để nhận lại từ Client
             memset(password, 0, sizeof(password)); //Reset password để nhận lại từ Client
             attempts = 0; //Reset attempts để nhận lại từ Client
-            isLoggedIn = 0; //Reset trạng thái đăng nhập để đăng nhập lại
+            session.isLoggedIn = 0; //Reset trạng thái đăng nhập để đăng nhập lại
 
             // strcpy(reply, "Goodbye HUST\n");
 
@@ -358,7 +395,7 @@ void handle_client(int connfd, struct sockaddr_in cliaddr, Llist_s *list, pid_t 
             // sendto(socketfd, reply, strlen(reply), 0, (const struct sockaddr *)&cliaddr, cliaddr_len);
             send(connfd, &msgOut, sizeof(msgOut), 0);
 
-        }else if(isLoggedIn == 0){
+        }else if(session.isLoggedIn == 0){
             // printf("CHECKKKKK\n");
 
             char bufferUsername[MAX_LEN];
@@ -366,7 +403,9 @@ void handle_client(int connfd, struct sockaddr_in cliaddr, Llist_s *list, pid_t 
             strcpy(bufferUsername, msgIn.value);
 
             // Xử lý thông tin nhận từ Client
+            pthread_mutex_lock(&file_mutex);
             AccountInfo_s accountInfo = searchAccountInFile(INPUT_FILE_PATH, bufferUsername);
+            pthread_mutex_unlock(&file_mutex);
             
             // Phần này chưa sử dụng server_handle_message vì phải xử lý đăng nhập tài khoản có trên file .txt
             if(strcmp(accountInfo.username, "") == 0){
@@ -379,14 +418,14 @@ void handle_client(int connfd, struct sockaddr_in cliaddr, Llist_s *list, pid_t 
                 memset(username, 0, sizeof(username)); //Reset username để nhận lại từ Client
                 memset(password, 0, sizeof(password)); //Reset password để nhận lại từ Client
                 attempts = 0; //Reset attempts để nhận lại từ Client
-                isLoggedIn = 0; //Reset trạng thái đăng nhập để đăng nhập lại
+                session.isLoggedIn = 0; //Reset trạng thái đăng nhập để đăng nhập lại
             
             }else{ 
                 // strcpy(reply, "OK\n");
 
                 create_message(&msgOut, MSG_CF, accountInfo.username);
-                loggedInUser = accountInfo; // Lưu thông tin tài khoản tìm được
-                isLoggedIn = 1; // Cập nhật trạng thái đã đăng nhập
+                session.loggedInUser = accountInfo; // Lưu thông tin tài khoản tìm được
+                session.isLoggedIn = 1; // Cập nhật trạng thái đã đăng nhập
 
                 // sendto(socketfd, reply, strlen(reply), 0, (const struct sockaddr *)&cliaddr, cliaddr_len);
                 send(connfd, &msgOut, sizeof(msgOut), 0);
@@ -453,7 +492,7 @@ void handle_client(int connfd, struct sockaddr_in cliaddr, Llist_s *list, pid_t 
             }
             */
 
-        }else if(isLoggedIn == 1){
+        }else if(session.isLoggedIn == 1){
 
 
 
@@ -488,6 +527,9 @@ void handle_client(int connfd, struct sockaddr_in cliaddr, Llist_s *list, pid_t 
         
     }
 
+    close(connfd);
+    printf("[Thread %lu] Client disconnected and connection closed.\n", (unsigned long)thread_id);
+    pthread_exit(NULL);
 }
 
 
@@ -535,7 +577,7 @@ int main(int argc, char *argv[]){
     memset(&cliaddr, 0, sizeof(cliaddr));
 
 
-    //Cấu hình Server UDP
+    //Cấu hình Server TCP
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     servaddr.sin_port = htons(servPort);
@@ -562,7 +604,7 @@ int main(int argc, char *argv[]){
     memset(&msgOut, 0, sizeof(msgOut));
     memset(&msgIn, 0, sizeof(msgIn));
 
-    signal(SIGCHLD, sig_chld_handler); // Xử lý tiến trình con kết thúc
+    // signal(SIGCHLD, sig_chld_handler); // Không cần với pthread
 
     for( ; ; ){
 
@@ -575,16 +617,32 @@ int main(int argc, char *argv[]){
 
         }
 
-        if((pid=fork()) == 0){
-            close(listenfd);
-            handle_client(connfd, cliaddr, list, getpid());
+        // Tạo thread data
+        thread_data_t *data = (thread_data_t*)malloc(sizeof(thread_data_t));
+        if(data == NULL){
+            perror("malloc failed");
             close(connfd);
-            exit(0);
+            continue;
         }
         
+        data->connfd = connfd;
+        data->cliaddr = cliaddr;
+        data->list = list;
         
-
-        close(connfd);
+        // Tạo thread để xử lý client
+        pthread_t thread_id;
+        if(pthread_create(&thread_id, NULL, handle_client, (void*)data) != 0){
+            perror("pthread_create failed");
+            free(data);
+            close(connfd);
+            continue;
+        }
+        
+        // Detach thread để tự động cleanup khi thread kết thúc
+        pthread_detach(thread_id);
+        
+        printf("Created thread %lu for client (%s:%d)\n", 
+               (unsigned long)thread_id, inet_ntoa(cliaddr.sin_addr), ntohs(cliaddr.sin_port));
     }
 
     //
