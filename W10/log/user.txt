@@ -1,0 +1,3 @@
+CHILD: 4 | Client: namnk | Type=0x10 | Length=6 | Value="namnk "
+CHILD: 4 | Client: namnk | Type=0x10 | Length=17 | Value="nam helloo server"
+CHILD: 5 | Client: quangvn | Type=0x10 | Length=22 | Value="quang hello server nhe"

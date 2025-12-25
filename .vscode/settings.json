@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "cstdlib": "c",
+        "time.h": "c",
+        "stddef.h": "c",
+        "random": "c",
+        "protocol.h": "c",
+        "stdint.h": "c",
+        "stdio.h": "c"
+    }
+}

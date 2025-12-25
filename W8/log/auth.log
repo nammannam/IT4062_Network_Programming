@@ -16,3 +16,13 @@
 [2025-11-25 15:49:59] LOGIN namnk from 127.0.0.1:35176 FAIL (account blocked)
 [2025-11-25 15:50:02] LOGIN namnk from 127.0.0.1:35176 FAIL (account blocked)
 [2025-11-25 15:50:05] LOGIN namnk from 127.0.0.1:35176 FAIL (account blocked)
+[2025-11-26 22:53:10] LOGIN namnk from 127.0.0.1:57522 FAIL (account blocked)
+[2025-11-26 22:53:26] LOGIN hungng from 127.0.0.1:50730 FAIL (account blocked)
+[2025-11-26 22:54:27] LOGIN locdinh from 127.0.0.1:57522 SUCCESS
+[2025-11-26 22:54:32] LOGIN quangvn from 127.0.0.1:50730 SUCCESS
+[2025-11-26 22:54:34] LOGIN admin from 127.0.0.1:33450 SUCCESS
+[2025-11-26 22:54:44] LOGOUT quangvn from 127.0.0.1:50730
+[2025-11-26 22:55:01] LOGIN quangvn from 127.0.0.1:50730 FAIL (wrong password)
+[2025-11-26 22:55:04] LOGIN quangvn from 127.0.0.1:50730 FAIL (wrong password)
+[2025-11-26 22:55:09] ACCOUNT_LOCKED quangvn
+[2025-11-26 22:55:09] LOGIN quangvn from 127.0.0.1:50730 FAIL (too many failed attempts)
